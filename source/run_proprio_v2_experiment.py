@@ -203,6 +203,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override the maximum environment steps per evaluation episode.",
     )
+    parser.add_argument(
+        "--independent-episode-seeds",
+        action="store_true",
+        help="Reseed planner and inference RNGs at each episode boundary.",
+    )
     return parser.parse_args()
 
 
@@ -1339,8 +1344,14 @@ def run_online(
     total_world_model_calls = 0
 
     for episode in range(int(settings["episodes"])):
+        episode_seed = (
+            int(config["seed"]) + int(settings["seed_offset"]) + episode
+        )
+        if bool(settings.get("independent_episode_seeds", False)):
+            set_seed(episode_seed)
+            rng = np.random.default_rng(episode_seed)
         observation, reset_info = env.reset(
-            seed=int(config["seed"]) + int(settings["seed_offset"]) + episode,
+            seed=episode_seed,
             options=base.task_reset_options(config),
         )
         goal_image = np.asarray(reset_info["goal_rendered"]).copy()
@@ -1753,6 +1764,7 @@ def run_online(
         save_video(video_path, frames, int(settings["fps"]))
         result = {
             "episode": episode,
+            "episode_seed": episode_seed,
             "steps": environment_step,
             "success": success,
             "system_success": success,
@@ -1884,6 +1896,9 @@ def run_online(
             "online_updates_enabled": online_updates_enabled,
         },
         "episodes": len(episode_results),
+        "independent_episode_seeds": bool(
+            settings.get("independent_episode_seeds", False)
+        ),
         "successes": system_successes,
         "system_successes": system_successes,
         "physical_successes": physical_successes,
@@ -2392,6 +2407,8 @@ def main() -> None:
         if args.max_steps <= 0:
             raise ValueError("--max-steps must be positive.")
         config["online_training"]["max_steps"] = int(args.max_steps)
+    if args.independent_episode_seeds:
+        config["online_training"]["independent_episode_seeds"] = True
     if args.freeze_actor:
         config["online_training"]["enable_updates"] = False
     oracle_settings = config.setdefault("oracle_subgoal", {})

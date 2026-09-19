@@ -1,0 +1,80 @@
+{
+  "design": {
+    "method": "100 independently reseeded complete episodes per method",
+    "episode_seeds": [
+      11100,
+      11199
+    ],
+    "actor_frozen": true,
+    "transfer_horizon_steps": 25,
+    "gate_match_mse_threshold": 0.0031,
+    "physical_success_definition": "OGBench cube-to-goal distance <= 0.04 m for two consecutive post-action frames",
+    "limitation": "Methods start from same-seed resets, not identical saved Transfer states; renderer/model numerical differences can still perturb trajectories."
+  },
+  "baseline": {
+    "episodes": 100,
+    "physical_successes": 69,
+    "physical_success_rate": 0.69,
+    "physical_success_wilson_95": [
+      0.5937394428051057,
+      0.7722030278762395
+    ],
+    "system_successes": 53,
+    "system_success_rate": 0.53,
+    "system_success_wilson_95": [
+      0.4328885697009936,
+      0.6248918204065872
+    ],
+    "physical_success_ever": 70,
+    "entered_transfer": 97,
+    "mean_steps_all": 120.51,
+    "mean_steps_physical_success": 84.79710144927536,
+    "mean_max_physical_success_streak": 9.41,
+    "mean_transfer_grasp_loss_frames": 46.72
+  },
+  "gated_h25": {
+    "episodes": 100,
+    "physical_successes": 61,
+    "physical_success_rate": 0.61,
+    "physical_success_wilson_95": [
+      0.5120301704584073,
+      0.6998312599360558
+    ],
+    "system_successes": 55,
+    "system_success_rate": 0.55,
+    "system_success_wilson_95": [
+      0.45244602997442135,
+      0.6438546202048803
+    ],
+    "physical_success_ever": 61,
+    "entered_transfer": 95,
+    "mean_steps_all": 118.15,
+    "mean_steps_physical_success": 65.81967213114754,
+    "mean_max_physical_success_streak": 3.31,
+    "mean_transfer_grasp_loss_frames": 60.26
+  },
+  "paired_physical_success": {
+    "both": 56,
+    "baseline_only": 13,
+    "gated_only": 5,
+    "neither": 26,
+    "exact_mcnemar_two_sided_p": 0.09625244140625
+  },
+  "paired_system_success": {
+    "both": 40,
+    "baseline_only": 13,
+    "gated_only": 15,
+    "neither": 32,
+    "exact_mcnemar_two_sided_p": 0.8505540192127228
+  },
+  "physical_success_rate_difference": -0.08,
+  "paired_bootstrap_95_interval": [
+    -0.16,
+    0.0
+  ],
+  "gate": {
+    "accepted_plans": 1055,
+    "rejected_plans": 7586,
+    "acceptance_rate": 0.12209235042240481
+  }
+}
