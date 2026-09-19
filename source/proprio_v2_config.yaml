@@ -1,10 +1,10 @@
 #123
 paths:
-  model_dir: ../../model/lewm-cube-mapped
-  action_dataset: ../../data/ogbench_state/cube-single-play-v0.npz
-  source_latent_cache: outputs/data/cube_semantic_latents.npz
-  complete_trajectory_dataset: outputs/data/recovery_temporal_proprio_latents.npz
-  output_dir: outputs/proprio_v2
+  model_dir: ../runtime/model/lewm-cube-mapped
+  action_dataset: ../runtime/data/ogbench_state/cube-single-play-v0.npz
+  source_latent_cache: ../runtime/outputs/data/cube_semantic_latents.npz
+  complete_trajectory_dataset: ../runtime/outputs/data/recovery_temporal_proprio_latents.npz
+  output_dir: ../runtime/outputs/proprio_v2
 
 seed: 42
 device: cuda
@@ -139,6 +139,11 @@ transfer_goal:
   goal_xyz_m: 0.04
   latent_mse_threshold: 0.017
   complete_consecutive_frames: 2
+
+evaluation:
+  # Primary physical metric: OGBench's 4 cm cube-goal criterion must hold
+  # for this many consecutive post-action frames.
+  physical_success_consecutive_frames: 2
 
 online_training:
   enable_updates: true

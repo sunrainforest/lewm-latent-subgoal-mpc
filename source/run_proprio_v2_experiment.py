@@ -191,6 +191,18 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override the configured random seed for paired evaluations.",
     )
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=None,
+        help="Override the number of online evaluation episodes.",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=None,
+        help="Override the maximum environment steps per evaluation episode.",
+    )
     return parser.parse_args()
 
 
@@ -1302,6 +1314,15 @@ def run_online(
     transfer_goal_latent = base.encode_image(
         world_model, transfer_goal_image, transform, device
     )
+    physical_success_required_frames = int(
+        config.get("evaluation", {}).get(
+            "physical_success_consecutive_frames", 2
+        )
+    )
+    if physical_success_required_frames < 1:
+        raise ValueError(
+            "evaluation.physical_success_consecutive_frames must be >= 1"
+        )
     video_dir.mkdir(parents=True, exist_ok=True)
     goal_rgb_path = video_dir / "transfer_goal_rgb.png"
     imageio.imwrite(goal_rgb_path, transfer_goal_image)
@@ -1353,6 +1374,13 @@ def run_online(
         terminated = False
         truncated = False
         oracle_success = False
+        physical_success_current = False
+        physical_success_ever = False
+        physical_success_streak = 0
+        max_physical_success_streak = 0
+        entered_transfer = False
+        transfer_grasp_loss_frames = 0
+        min_transfer_goal_mse = float("inf")
 
         while environment_step < int(settings["max_steps"]):
             state_before_plan = machine.state
@@ -1499,6 +1527,25 @@ def run_online(
                 next_observation, _, terminated, truncated, info = env.step(action)
                 environment_step += 1
                 oracle_success = bool(info.get("success", False))
+                # OGBench's cube-single task reports success using the state
+                # before the action. The unwrapped environment has already
+                # executed post_step(), so _success reflects the state after
+                # the action that produced next_observation.
+                physical_success_current = bool(
+                    getattr(env.unwrapped, "_success", oracle_success)
+                )
+                physical_success_ever = (
+                    physical_success_ever or physical_success_current
+                )
+                physical_success_streak = (
+                    physical_success_streak + 1
+                    if physical_success_current
+                    else 0
+                )
+                max_physical_success_streak = max(
+                    max_physical_success_streak,
+                    physical_success_streak,
+                )
                 next_image = np.asarray(env.render()).copy()
                 next_latent = base.encode_image(
                     world_model, next_image, transform, device
@@ -1531,6 +1578,14 @@ def run_online(
                     .cpu()
                     .item()
                 )
+                if state_before == TRANSFER:
+                    min_transfer_goal_mse = min(
+                        min_transfer_goal_mse, transfer_mse
+                    )
+                    if next_predicates[GRASPED] < float(
+                        config["state_machine"]["grasp_exit_threshold"]
+                    ):
+                        transfer_grasp_loss_frames += 1
                 next_target_mse = float(
                     (next_latent - keyframe_target)
                     .square()
@@ -1549,6 +1604,7 @@ def run_online(
                     next_proprio[0].cpu().numpy(),
                     transfer_goal_reached=transfer_reached,
                 )
+                entered_transfer = entered_transfer or machine.state == TRANSFER
                 if state_transition.changed:
                     state_history.append(state_transition.current)
 
@@ -1624,6 +1680,10 @@ def run_online(
                     "keyframe_target_mse": next_target_mse,
                     "transfer_goal_reached": transfer_reached,
                     "complete": state_transition.complete,
+                    "physical_success_pre_action": oracle_success,
+                    "physical_success_post_action": physical_success_current,
+                    "physical_success_streak": physical_success_streak,
+                    "max_physical_success_streak": max_physical_success_streak,
                     "planner_advantage": planner_advantage,
                     "best_score": float(scores[best_index].cpu().item()),
                     "short_target_cost": float(
@@ -1684,6 +1744,10 @@ def run_online(
                 break
 
         success = bool(machine.complete)
+        physical_success = (
+            max_physical_success_streak
+            >= physical_success_required_frames
+        )
         status = "success" if success else "failed"
         video_path = video_dir / f"proprio_v2_episode_{episode}_{status}.mp4"
         save_video(video_path, frames, int(settings["fps"]))
@@ -1691,6 +1755,21 @@ def run_online(
             "episode": episode,
             "steps": environment_step,
             "success": success,
+            "system_success": success,
+            "physical_success": physical_success,
+            "physical_success_ever": physical_success_ever,
+            "physical_success_final": physical_success_current,
+            "max_physical_success_streak": max_physical_success_streak,
+            "physical_success_required_frames": (
+                physical_success_required_frames
+            ),
+            "entered_transfer": entered_transfer,
+            "transfer_grasp_loss_frames": transfer_grasp_loss_frames,
+            "min_transfer_goal_mse": (
+                min_transfer_goal_mse
+                if np.isfinite(min_transfer_goal_mse)
+                else None
+            ),
             "oracle_success_for_metrics_only": oracle_success,
             "state_history": [STATE_NAMES[index] for index in state_history],
             "recoveries": machine.recoveries,
@@ -1703,6 +1782,39 @@ def run_online(
         print(json.dumps(result))
 
     env.close()
+    system_successes = int(
+        sum(result["system_success"] for result in episode_results)
+    )
+    physical_successes = int(
+        sum(result["physical_success"] for result in episode_results)
+    )
+    success_confusion = {
+        "system_and_physical": int(
+            sum(
+                result["system_success"] and result["physical_success"]
+                for result in episode_results
+            )
+        ),
+        "system_only_false_positive": int(
+            sum(
+                result["system_success"] and not result["physical_success"]
+                for result in episode_results
+            )
+        ),
+        "physical_only_system_miss": int(
+            sum(
+                not result["system_success"] and result["physical_success"]
+                for result in episode_results
+            )
+        ),
+        "neither": int(
+            sum(
+                not result["system_success"]
+                and not result["physical_success"]
+                for result in episode_results
+            )
+        ),
+    }
     shadow_summary: dict[str, Any] = {
         "enabled": subgoal_shadow_enabled,
         "control_enabled": subgoal_control_enabled,
@@ -1772,7 +1884,16 @@ def run_online(
             "online_updates_enabled": online_updates_enabled,
         },
         "episodes": len(episode_results),
-        "successes": int(sum(result["success"] for result in episode_results)),
+        "successes": system_successes,
+        "system_successes": system_successes,
+        "physical_successes": physical_successes,
+        "physical_success_ever": int(
+            sum(result["physical_success_ever"] for result in episode_results)
+        ),
+        "physical_success_required_frames": (
+            physical_success_required_frames
+        ),
+        "success_confusion": success_confusion,
         "grasp_confirmed_episodes": int(
             sum(TRANSFER in [
                 STATE_NAMES.index(name) for name in result["state_history"]
@@ -2263,6 +2384,14 @@ def main() -> None:
     config = base.load_config(args.config.resolve())
     if args.seed is not None:
         config["seed"] = int(args.seed)
+    if args.episodes is not None:
+        if args.episodes <= 0:
+            raise ValueError("--episodes must be positive.")
+        config["online_training"]["episodes"] = int(args.episodes)
+    if args.max_steps is not None:
+        if args.max_steps <= 0:
+            raise ValueError("--max-steps must be positive.")
+        config["online_training"]["max_steps"] = int(args.max_steps)
     if args.freeze_actor:
         config["online_training"]["enable_updates"] = False
     oracle_settings = config.setdefault("oracle_subgoal", {})

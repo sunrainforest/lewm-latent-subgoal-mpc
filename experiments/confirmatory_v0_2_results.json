@@ -1,0 +1,98 @@
+{
+  "design": {
+    "seeds": [
+      100,
+      109
+    ],
+    "episodes_per_seed_per_method": 10,
+    "actor_frozen": true,
+    "gated_oracle_horizon_steps": 25,
+    "confidence_match_mse_threshold": 0.0031,
+    "physical_success_definition": "OGBench cube-to-goal distance <= 0.04 m for 2 consecutive post-action frames",
+    "pairing_limitation": "Episode 0 is a strict same-seed pair. Later episodes share a run-level RNG stream that can desynchronize after methods take different numbers of steps; all-episode McNemar results are exploratory."
+  },
+  "baseline": {
+    "episodes": 100,
+    "physical_successes": 55,
+    "physical_success_rate": 0.55,
+    "physical_success_wilson_95": [
+      0.45244602997442135,
+      0.6438546202048803
+    ],
+    "system_successes": 46,
+    "system_success_rate": 0.46,
+    "system_success_wilson_95": [
+      0.36560808309024106,
+      0.5573513967663177
+    ],
+    "physical_success_ever": 55,
+    "entered_transfer": 94,
+    "mean_steps_all": 130.76,
+    "mean_steps_physical_success": 74.10909090909091,
+    "mean_max_physical_success_streak": 8.68,
+    "mean_transfer_grasp_loss_frames": 73.06
+  },
+  "gated_h25": {
+    "episodes": 100,
+    "physical_successes": 59,
+    "physical_success_rate": 0.59,
+    "physical_success_wilson_95": [
+      0.4920143005341078,
+      0.6813268697886348
+    ],
+    "system_successes": 52,
+    "system_success_rate": 0.52,
+    "system_success_wilson_95": [
+      0.4231657776522397,
+      0.615354482419481
+    ],
+    "physical_success_ever": 59,
+    "entered_transfer": 99,
+    "mean_steps_all": 121.13,
+    "mean_steps_physical_success": 66.32203389830508,
+    "mean_max_physical_success_streak": 4.35,
+    "mean_transfer_grasp_loss_frames": 61.16
+  },
+  "exploratory_index_paired_physical_success": {
+    "pairs": 100,
+    "both": 49,
+    "baseline_only": 6,
+    "gated_only": 10,
+    "neither": 35,
+    "exact_mcnemar_two_sided_p": 0.454498291015625
+  },
+  "exploratory_index_paired_system_success": {
+    "pairs": 100,
+    "both": 35,
+    "baseline_only": 11,
+    "gated_only": 17,
+    "neither": 37,
+    "exact_mcnemar_two_sided_p": 0.34492845088243484
+  },
+  "strict_first_episode_physical_success": {
+    "pairs": 10,
+    "both": 7,
+    "baseline_only": 0,
+    "gated_only": 0,
+    "neither": 3,
+    "exact_mcnemar_two_sided_p": 1.0
+  },
+  "strict_first_episode_system_success": {
+    "pairs": 10,
+    "both": 5,
+    "baseline_only": 0,
+    "gated_only": 1,
+    "neither": 4,
+    "exact_mcnemar_two_sided_p": 1.0
+  },
+  "gate": {
+    "accepted_plans": 1064,
+    "rejected_plans": 8640,
+    "acceptance_rate": 0.10964550700741962
+  },
+  "effect": {
+    "physical_success_rate_difference": 0.039999999999999925,
+    "system_success_rate_difference": 0.06,
+    "mean_steps_all_difference": -9.629999999999995
+  }
+}

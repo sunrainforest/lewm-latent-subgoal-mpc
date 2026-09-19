@@ -1,4 +1,7 @@
 __pycache__/
 *.py[cod]
 release_assets/
+runtime/
+vendor_reference/
+experiments/*.log
 docs/*_snapshot.md
