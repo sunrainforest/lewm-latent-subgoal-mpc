@@ -1,0 +1,96 @@
+{
+  "version": "v0.1",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "episodes_per_seed": 10,
+  "actor_frozen": true,
+  "methods": {
+    "baseline": {
+      "episodes": 50,
+      "successes": 20,
+      "success_rate": 0.4,
+      "successes_by_seed": {
+        "42": 1,
+        "43": 4,
+        "44": 4,
+        "45": 6,
+        "46": 5
+      },
+      "mean_steps": 139.78,
+      "mean_min_transfer_goal_mse": 0.14663035135240632
+    },
+    "retrieval": {
+      "episodes": 50,
+      "successes": 26,
+      "success_rate": 0.52,
+      "successes_by_seed": {
+        "42": 6,
+        "43": 4,
+        "44": 4,
+        "45": 7,
+        "46": 5
+      },
+      "mean_steps": 123.52,
+      "mean_min_transfer_goal_mse": 0.09047828518728517
+    },
+    "gated_retrieval": {
+      "episodes": 50,
+      "successes": 30,
+      "success_rate": 0.6,
+      "successes_by_seed": {
+        "42": 8,
+        "43": 5,
+        "44": 7,
+        "45": 6,
+        "46": 4
+      },
+      "mean_steps": 110.18,
+      "mean_min_transfer_goal_mse": 0.08642963422889992
+    },
+    "learned_double_gate": {
+      "episodes": 50,
+      "successes": 24,
+      "success_rate": 0.48,
+      "successes_by_seed": {
+        "42": 4,
+        "43": 5,
+        "44": 4,
+        "45": 7,
+        "46": 4
+      },
+      "mean_steps": 128.8,
+      "mean_min_transfer_goal_mse": 0.09401476316755482
+    }
+  },
+  "comparisons": {
+    "retrieval_vs_baseline": {
+      "paired_gain": 11,
+      "paired_loss": 5,
+      "paired_ties": 34,
+      "mcnemar_exact_two_sided_p": 0.210113525390625
+    },
+    "gated_retrieval_vs_baseline": {
+      "paired_gain": 13,
+      "paired_loss": 3,
+      "paired_ties": 34,
+      "mcnemar_exact_two_sided_p": 0.021270751953125
+    },
+    "learned_double_gate_vs_baseline": {
+      "paired_gain": 9,
+      "paired_loss": 5,
+      "paired_ties": 36,
+      "mcnemar_exact_two_sided_p": 0.4239501953125
+    }
+  },
+  "latent_subgoal_training": {
+    "best_epoch": 71,
+    "train_samples": 1315,
+    "validation_samples": 333,
+    "validation_latent_mse": 0.006094854276578825
+  }
+}

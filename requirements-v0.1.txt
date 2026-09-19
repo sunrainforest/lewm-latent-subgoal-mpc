@@ -1,0 +1,8 @@
+# Versions used for the reported v0.1 experiments.
+torch==2.12.1
+numpy==2.2.6
+mujoco==3.10.0
+imageio==2.37.3
+PyYAML==6.0.3
+
+# OGBench and the upstream LeWM project must be installed separately.
