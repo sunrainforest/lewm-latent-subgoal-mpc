@@ -1,0 +1,67 @@
+{
+  "method": "ungated successful-trajectory nearest-neighbor retrieval in TRANSFER, H=25",
+  "primary_metric": "proprio_v2 machine.complete (latent completion)",
+  "actor_frozen": true,
+  "checkpoint_sha256": "f49db5c3b789db7221e9da9805ff5b73d3b275c90ae9f25ae9d6f9dc607fdfc5",
+  "successful_trajectory_library_episodes": 64,
+  "batches": [
+    {
+      "label": "exploratory",
+      "episode_seeds": [11100, 11199],
+      "episodes_per_method": 100,
+      "baseline": {
+        "episodes": 100,
+        "latent_completions": 53,
+        "entered_transfer": 97,
+        "mean_episode_steps": 120.51
+      },
+      "ungated_h25": {
+        "episodes": 100,
+        "latent_completions": 60,
+        "entered_transfer": 95,
+        "mean_episode_steps": 109.9
+      },
+      "paired": {
+        "both": 45,
+        "baseline_only": 8,
+        "ungated_only": 15,
+        "neither": 32,
+        "rate_difference": 0.07,
+        "paired_percentile_bootstrap_95_interval": [-0.02, 0.16],
+        "exact_two_sided_mcnemar_p": 0.21003961563110352
+      }
+    },
+    {
+      "label": "new-seed check, protocol fixed before outcomes",
+      "episode_seeds": [11200, 11299],
+      "episodes_per_method": 100,
+      "baseline": {
+        "episodes": 100,
+        "latent_completions": 51,
+        "entered_transfer": 98,
+        "mean_episode_steps": 123.52
+      },
+      "ungated_h25": {
+        "episodes": 100,
+        "latent_completions": 59,
+        "entered_transfer": 94,
+        "mean_episode_steps": 112.17
+      },
+      "paired": {
+        "both": 40,
+        "baseline_only": 11,
+        "ungated_only": 19,
+        "neither": 30,
+        "rate_difference": 0.08,
+        "paired_percentile_bootstrap_95_interval": [-0.03, 0.19],
+        "exact_two_sided_mcnemar_p": 0.20048842206597328,
+        "prespecified_positive_and_p_lt_0_05": false
+      }
+    }
+  ],
+  "limitations": [
+    "Same-seed separate full runs do not guarantee identical Transfer states.",
+    "The positive observed differences do not establish a stable improvement at p<0.05.",
+    "Fixed-task MuJoCo evaluation only; no cross-task or real-robot evidence."
+  ]
+}

@@ -1,69 +1,38 @@
 # LeWM Latent Subgoal MPC
 
-An experimental extension of a frozen LeWorldModel (LeWM) controller for long-horizon
-cube manipulation. This v0.1 release studies whether intermediate latent targets improve
-the `TRANSFER` phase while keeping the encoder, dynamics model, actor, MPC planner,
-value ensemble, and three-phase finite-state machine unchanged.
+这是一个基于 LeWorldModel (LeWM) 的单任务 Cube 操作实验。当前冻结的第一版方法是**无置信度门控的成功轨迹检索**：只在 `TRANSFER` 阶段，从离线成功轨迹中寻找与当前 latent 最近的状态，并以同一轨迹最多前方 25 步的 latent 作为 MPC 的中间目标。Actor 在评估时冻结；LeWM、TransitionNet、三阶段 FSM、Actor、MPC 和 Value Ensemble 均保留。
 
-## v0.1 results
+代码中的 `oracle_subgoal` 是历史命名。这里使用的是**已有成功轨迹库的未来 latent**，不是测试回合尚未发生的未来真值，也不是已训练成功的 `LatentSubgoalPlanner`。库中含有 64 条固定任务成功轨迹；当前结果不证明跨任务泛化。
 
-All methods use the same five seeds (42--46), ten episodes per seed, and a frozen actor.
+## 主要结果：`proprio_v2` latent 完成率
 
-| Method | Success rate | Mean steps | Mean minimum transfer MSE |
-| --- | ---: | ---: | ---: |
-| Final-goal baseline | 20/50 (40%) | 139.78 | 0.1466 |
-| Ungated trajectory retrieval | 26/50 (52%) | 123.52 | 0.0905 |
-| Confidence-gated trajectory retrieval | **30/50 (60%)** | **110.18** | **0.0864** |
-| Learned MLP with two gates | 24/50 (48%) | 128.80 | 0.0940 |
+完成判据为 FSM 在 `TRANSFER` 阶段检测到最终目标 latent MSE ≤ 0.017，连续 2 帧后设置 `machine.complete`。不使用方块物理位置替代该判据。两组均使用相同 checkpoint、冻结 Actor、每回合独立重设随机种子，最多 300 环境步。
 
-The strongest v0.1 result is confidence-gated retrieval. The learned planner has low
-offline latent prediction error but does not yet provide a statistically stable control
-improvement, which suggests that latent MSE alone is not a sufficient reachability
-objective.
+| 批次 | 回合 seed | Baseline | 无门控检索 H=25 | 差值 |
+| --- | --- | ---: | ---: | ---: |
+| 探索性对照 | 11100–11199 | 53/100 | 60/100 | +7 个百分点 |
+| 新 seed 复核 | 11200–11299 | 51/100 | 59/100 | +8 个百分点 |
 
-## Repository contents
+新 seed 复核的配对 bootstrap 95% 区间为 **−3 至 +19 个百分点**，双侧精确 McNemar `p=0.2005`。两批都观察到正向差异，但目前**不能声称稳定提升已获统计证实**。同 seed 的两个完整运行也不保证到达完全相同的 `TRANSFER` 状态。逐批配对计数和分析方法见 [结果说明](results/frozen_ungated_v1/README.md)。
 
-- `source/`: planner, training script, experiment integration, configuration, and result summarizer;
-- `docs/V0_1_RELEASE.md`: method, commands, results, limitations, and roadmap;
-- `docs/DATA.md`: datasets, checkpoints, sizes, and SHA-256 checksums;
-- `results/v0.1/summary.json`: machine-readable five-seed results;
-- `CONTENTS.md`: internal bundle index.
+## 复现
 
-The files in `source/` are an experiment change set, not a standalone copy of LeWM.
-They are intended to be overlaid on the corresponding cube-robot experiment directory
-in the upstream project.
+本仓库的 `source/` 是从上游 Cube 实验复制出的实验代码副本，不是完整 LeWM 权重或 OGBench 数据发行包。需要 CUDA 环境，以及 [数据清单](docs/DATA.md) 所列的 LeWM 权重、`proprio_v2` checkpoint 和 64 条成功轨迹文件。二进制资产尚未获再分发确认，未放入 Git 历史；**仅克隆此仓库不能直接重跑数值结果**。
 
-## Design
+资产齐备后，按 [复现指南](docs/REPRODUCE.md)检查版本和文件校验值，并运行：
 
-```text
-current latent + final goal latent + phase + proprioception
-                         |
-                         v
-             single-step latent subgoal
-                         |
-                         v
-                  Actor + MPC + LeWM
+```bash
+PYTHON_BIN=/path/to/python bash experiments/run_frozen_ungated_v1.sh 100 100
+PYTHON_BIN=/path/to/python bash experiments/run_frozen_ungated_v1.sh 200 100
 ```
 
-The first version retains `ALIGN -> GRASP -> TRANSFER`. Subgoals are used only during
-`TRANSFER`, with confidence gates that fall back to the original final latent target.
+脚本顺序运行 Baseline 和无门控 H=25，拒绝覆盖已有结果；原始日志、视频和模型输出写入 Git 忽略的 `runtime/`。也可用 [汇总脚本](experiments/summarize_frozen_ungated_v1.py)对已完成的 summary JSON 重新计算配对结果。复跑受仿真和 GPU 数值非确定性影响，未必逐回合 bitwise 相同。
 
-## Reproduction
+## 范围与历史
 
-See [`docs/V0_1_RELEASE.md`](docs/V0_1_RELEASE.md) for commands and
-[`docs/DATA.md`](docs/DATA.md) for required artifacts. Large data, pretrained weights,
-videos, and generated logs are intentionally excluded from Git history.
+- 当前第一版只将**轨迹检索辅助 MPC**作为主方法。仓库中保留的学习型 MLP、门控方案及早期 50 回合评估属于探索性历史，不应与此表混为同一结论。
+- 仅 MuJoCo 仿真、单一方块起点/目标；没有真实机械臂实验。
+- 需要离线成功轨迹库；这不是无需专家数据的通用规划器。
+- 旧版 50 回合结果保存在 [`results/v0.1/`](results/v0.1/)，用于溯源，不是当前首页的主结果。
 
-## Limitations
-
-- MuJoCo simulation only;
-- one fixed cube start/goal task;
-- 50 evaluation episodes per method;
-- the learned planner uses only 64 successful fixed-task trajectories;
-- trajectory retrieval depends on an offline success library.
-
-## License
-
-The included code is distributed under the repository's MIT license. Third-party models,
-datasets, and upstream components remain subject to their own licenses and are not
-redistributed in the source repository.
+源码采用仓库中的 [MIT 许可证](LICENSE)；上游 LeWM、OGBench、模型权重和数据仍以各自许可为准，未随本仓库再分发。

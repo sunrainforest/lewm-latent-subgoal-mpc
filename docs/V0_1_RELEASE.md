@@ -1,3 +1,7 @@
+# 历史探索记录：早期 50 回合 v0.1
+
+> 本文档保留早期门控/学习型 MLP 实验的原始说明，不是当前冻结的无门控 H=25 主版本。当前主结果、latent 完成判据和复现方法分别见仓库根目录 `README.md`、`results/frozen_ungated_v1/README.md`、`docs/REPRODUCE.md`。本文下方的 50 回合结论不可覆盖后续两批各 100 回合的独立种子结果；原有复现命令也使用旧目录布局。
+
 # LeWM_Saimo v0.1：Confidence-Gated Latent Subgoal MPC
 
 这是一个基于冻结 LeWorldModel（LeWM）的 Cube 机械臂长程控制实验版本。

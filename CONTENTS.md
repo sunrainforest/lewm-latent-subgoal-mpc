@@ -1,28 +1,12 @@
-# LeWM Latent Subgoal MPC v0.1 整理包
+# 项目内容
 
-本目录是从原 LeWM 实验项目只读复制出的独立工作副本。后续所有整理、修改、实验归档
-和 GitHub 发布准备均在此副本内完成，不直接修改原项目。
+当前冻结的第一版为**仅在 TRANSFER 启用、无置信度门控、H=25 的成功轨迹检索 + MPC**。主结果和限制见 [`README.md`](README.md)，复现步骤见 [`docs/REPRODUCE.md`](docs/REPRODUCE.md)，权重/数据边界见 [`docs/DATA.md`](docs/DATA.md)。
 
-## 目录
+- `source/`：从 Cube 实验复制出的实现副本；`run_proprio_v2_experiment.py` 与 `proprio_v2_config.yaml` 为评估入口和配置。
+- `experiments/run_frozen_ungated_v1.sh`：顺序运行 Baseline 与无门控 H=25；不覆盖已有结果。
+- `experiments/summarize_frozen_ungated_v1.py`：校验配置并汇总 `proprio_v2` latent 完成率。
+- `results/frozen_ungated_v1/`：两批各 100 回合的可公开统计摘要，无个人路径或二进制资产。
+- `results/v0.1/`、`docs/V0_1_RELEASE.md`：早期 50 回合与门控/学习型 MLP 探索记录，**不是当前冻结版的主结果**。
+- `runtime/`、`release_assets/`、`vendor_reference/`：仅服务器本地，Git 忽略；不得误认为仓库自带数据和权重。
 
-- `docs/`：v0.1 发布说明、数据说明、发布清单及 README 快照；
-- `source/`：本次实验涉及的源码和配置副本；
-- `results/v0.1/`：50 回合评估的说明和结构化汇总；
-- `release_assets/`：候选数据、checkpoint 与配对演示视频。
-
-## 核心结果
-
-| 方法 | 成功率 |
-| --- | ---: |
-| 原始最终目标 | 20/50（40%） |
-| 无门控轨迹检索 | 26/50（52%） |
-| 置信度门控轨迹检索 | 30/50（60%） |
-| 学习型 MLP + 双门控 | 24/50（48%） |
-
-## 使用边界
-
-`source/` 是差异文件集合，不是可独立运行的完整 LeWM 仓库。若后续需要原项目中的
-其他依赖文件，应先复制到本工作区的明确子目录，再进行查看或修改。
-
-二进制附件目前只在服务器本地归档；在确认数据和权重的再分发许可前，不上传到
-公开仓库。
+所有整理与实验均在独立副本进行，不改原版 LeWM_SAIMO。
