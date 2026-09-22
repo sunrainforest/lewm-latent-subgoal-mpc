@@ -117,6 +117,20 @@ latent_subgoal_planner:
   split_seed_offset: 31000
   early_stopping_patience: 35
   max_grad_norm: 1.0
+  # Stage-two research: learn generic H=25 temporal structure from OGBench
+  # play trajectories, then adapt to the 64 successful fixed-task episodes.
+  stage2:
+    play_validation_fraction: 0.10
+    play_test_fraction: 0.10
+    batch_size: 128
+    pretrain_epochs: 150
+    finetune_epochs: 200
+    pretrain_learning_rate: 0.0002
+    finetune_learning_rate: 0.00005
+    early_stopping_patience: 30
+    pretrain_checkpoint_name: latent_subgoal_planner_play_h25_pretrain_only.pt
+    checkpoint_name: latent_subgoal_planner_play_finetuned_h25.pt
+    summary_name: latent_subgoal_planner_stage2_h25_summary.json
 
 state_machine:
   aligned_enter_threshold: 0.65
