@@ -1,0 +1,37 @@
+{
+  "cache_samples": 64000,
+  "source_episodes": 1000,
+  "unique_current_source_indices": 64000,
+  "duplicate_current_rows": 0,
+  "state_counts": {
+    "align": 21799,
+    "grasp": 10289,
+    "transfer": 31912
+  },
+  "same_episode_goal": 64000,
+  "future_goal": 63941,
+  "transfer_future_goal_same_episode": 31891,
+  "exact_h_transfer_pairs": 5586,
+  "exact_h_episodes": 997,
+  "capped_at_goal_transfer_pairs": 5655,
+  "capped_at_goal_episodes": 997,
+  "lookahead_steps": 10,
+  "capped_full_h_fraction": 0.9877984084880637,
+  "goal_horizon": {
+    "min": 1,
+    "median": 59.0,
+    "mean": 60.34076038903625,
+    "max": 100
+  },
+  "capped_baselines": {
+    "current_to_target_mse": 0.31292393803596497,
+    "goal_to_target_mse": 0.42182400822639465
+  },
+  "samples_per_episode_quantiles": {
+    "0.0": 1.0,
+    "0.25": 4.0,
+    "0.5": 5.0,
+    "0.75": 7.0,
+    "1.0": 13.0
+  }
+}

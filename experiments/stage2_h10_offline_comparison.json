@@ -1,0 +1,33 @@
+{
+  "lookahead_steps": 10,
+  "validation_episodes": [
+    4,
+    10,
+    13,
+    14,
+    16,
+    17,
+    20,
+    21,
+    25,
+    27,
+    47,
+    52,
+    62
+  ],
+  "validation_samples": 333,
+  "task_only": {
+    "latent_mse": 0.012071563862264156,
+    "median_sample_mse": 0.005526216235011816
+  },
+  "play_pretrained_then_finetuned": {
+    "latent_mse": 0.02101324498653412,
+    "median_sample_mse": 0.011619015596807003
+  },
+  "paired": {
+    "stage2_minus_task_only_mean_mse": 0.008941682986915112,
+    "stage2_better_sample_fraction": 0.16816816816816818,
+    "stage2_equal_sample_fraction": 0.0
+  },
+  "interpretation": "Lower latent MSE is better; this is offline prediction, not control success."
+}

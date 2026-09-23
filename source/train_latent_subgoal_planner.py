@@ -34,6 +34,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--device", default=None)
+    parser.add_argument("--lookahead-steps", type=int, default=None)
+    parser.add_argument("--checkpoint-name", default=None)
+    parser.add_argument("--summary-name", default=None)
+    parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
 
@@ -191,7 +195,13 @@ def main() -> None:
         / "data"
         / "proprio_v2_task_continuous.npz"
     )
-    lookahead_steps = int(settings["lookahead_steps"])
+    lookahead_steps = int(
+        settings["lookahead_steps"]
+        if args.lookahead_steps is None
+        else args.lookahead_steps
+    )
+    if lookahead_steps <= 0:
+        raise ValueError("lookahead_steps must be positive.")
     samples = load_samples(dataset_path, lookahead_steps)
     train_indices, validation_indices, validation_episodes = split_by_episode(
         samples,
@@ -307,17 +317,37 @@ def main() -> None:
     )
     final_validation = evaluate(model, validation_loader, device)
     output_dir = config["paths"]["output_dir"]
-    checkpoint_path = (
-        output_dir
-        / "checkpoints"
-        / settings.get("checkpoint_name", "latent_subgoal_planner_h25.pt")
+    checkpoint_name = args.checkpoint_name
+    if checkpoint_name is None:
+        if lookahead_steps == int(settings["lookahead_steps"]):
+            checkpoint_name = settings.get(
+                "checkpoint_name", f"latent_subgoal_planner_h{lookahead_steps}.pt"
+            )
+        else:
+            checkpoint_name = f"latent_subgoal_planner_task_only_h{lookahead_steps}.pt"
+    if Path(checkpoint_name).name != checkpoint_name:
+        raise ValueError("checkpoint-name must be a filename, not a path.")
+    checkpoint_path = output_dir / "checkpoints" / checkpoint_name
+    summary_name = (
+        args.summary_name
+        if args.summary_name is not None
+        else f"latent_subgoal_planner_task_only_h{lookahead_steps}_summary.json"
     )
+    if Path(summary_name).name != summary_name:
+        raise ValueError("summary-name must be a filename, not a path.")
+    summary_path = output_dir / summary_name
+    for path in (checkpoint_path, summary_path):
+        if path.exists() and not args.overwrite:
+            raise FileExistsError(
+                f"Refusing to overwrite {path}; pass --overwrite explicitly."
+            )
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "model_config": model.model_config(),
         "model_state": best_state,
         "lookahead_steps": lookahead_steps,
         "phase": "transfer",
+        "initialization": "fresh random weights; no prior checkpoint loaded",
         "seed": seed,
         "best_epoch": best_epoch,
         "train_metrics": final_train,
@@ -343,7 +373,6 @@ def main() -> None:
         },
         "history": history,
     }
-    summary_path = output_dir / "latent_subgoal_planner_h25_summary.json"
     save_json(summary_path, summary)
     print(json.dumps(base.json_value({
         "checkpoint": checkpoint_path,

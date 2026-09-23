@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default=None)
     parser.add_argument("--pretrain-epochs", type=int, default=None)
     parser.add_argument("--finetune-epochs", type=int, default=None)
+    parser.add_argument(
+        "--lookahead-steps",
+        type=int,
+        default=None,
+        help="Override the configured horizon; each horizon starts from fresh weights.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -312,14 +318,15 @@ def write_json(path: Path, value: dict[str, Any]) -> None:
 
 
 def sample_summary(
-    samples: dict[str, np.ndarray], indices: np.ndarray
+    samples: dict[str, np.ndarray], indices: np.ndarray, lookahead_steps: int
 ) -> dict[str, Any]:
     lookahead = samples["actual_lookahead"][indices]
     return {
         "samples": int(len(indices)),
         "episodes": int(len(np.unique(samples["episode"][indices]))),
+        "lookahead_steps": int(lookahead_steps),
         "actual_lookahead_mean": float(np.mean(lookahead)),
-        "full_h25_fraction": float(np.mean(lookahead == 25)),
+        "full_h_fraction": float(np.mean(lookahead == lookahead_steps)),
     }
 
 
@@ -334,9 +341,13 @@ def main() -> None:
         raise RuntimeError("CUDA was requested but is not available.")
     set_seed(seed)
 
-    lookahead_steps = int(settings["lookahead_steps"])
-    if lookahead_steps != 25:
-        raise ValueError("Stage-two experiment is frozen to H=25.")
+    lookahead_steps = int(
+        settings["lookahead_steps"]
+        if args.lookahead_steps is None
+        else args.lookahead_steps
+    )
+    if lookahead_steps <= 0:
+        raise ValueError("lookahead_steps must be positive.")
     play_samples = load_play_samples(
         config["paths"]["source_latent_cache"],
         config["paths"]["action_dataset"],
@@ -408,16 +419,34 @@ def main() -> None:
     )
 
     output_dir = config["paths"]["output_dir"]
-    pretrain_checkpoint = output_dir / "checkpoints" / stage2.get(
-        "pretrain_checkpoint_name",
-        "latent_subgoal_planner_play_h25_pretrain_only.pt",
-    )
-    final_checkpoint = output_dir / "checkpoints" / stage2.get(
-        "checkpoint_name", "latent_subgoal_planner_play_finetuned_h25.pt"
-    )
-    summary_path = output_dir / stage2.get(
-        "summary_name", "latent_subgoal_planner_stage2_h25_summary.json"
-    )
+    configured_horizon = int(settings["lookahead_steps"])
+    if lookahead_steps == configured_horizon:
+        pretrain_name = stage2.get(
+            "pretrain_checkpoint_name",
+            f"latent_subgoal_planner_play_h{lookahead_steps}_pretrain_only.pt",
+        )
+        final_name = stage2.get(
+            "checkpoint_name",
+            f"latent_subgoal_planner_play_finetuned_h{lookahead_steps}.pt",
+        )
+        summary_name = stage2.get(
+            "summary_name",
+            f"latent_subgoal_planner_stage2_h{lookahead_steps}_summary.json",
+        )
+    else:
+        # Never reuse a checkpoint name across horizons.
+        pretrain_name = (
+            f"latent_subgoal_planner_play_h{lookahead_steps}_pretrain_only.pt"
+        )
+        final_name = (
+            f"latent_subgoal_planner_play_finetuned_h{lookahead_steps}.pt"
+        )
+        summary_name = (
+            f"latent_subgoal_planner_stage2_h{lookahead_steps}_summary.json"
+        )
+    pretrain_checkpoint = output_dir / "checkpoints" / pretrain_name
+    final_checkpoint = output_dir / "checkpoints" / final_name
+    summary_path = output_dir / summary_name
     for path in (pretrain_checkpoint, final_checkpoint, summary_path):
         if path.exists() and not args.overwrite:
             raise FileExistsError(
@@ -484,14 +513,17 @@ def main() -> None:
         "task_validation": evaluate(model, task_validation_loader, device),
         "play_test_after_finetuning": evaluate(model, play_test_loader, device),
     }
-    task_only_checkpoint = output_dir / "checkpoints" / settings.get(
-        "checkpoint_name", "latent_subgoal_planner_h25.pt"
+    task_only_name = (
+        settings.get("checkpoint_name", f"latent_subgoal_planner_h{lookahead_steps}.pt")
+        if lookahead_steps == configured_horizon
+        else f"latent_subgoal_planner_task_only_h{lookahead_steps}.pt"
     )
+    task_only_checkpoint = output_dir / "checkpoints" / task_only_name
     if not task_only_checkpoint.exists():
         release_candidate = (
             HERE.parent
             / "release_assets"
-            / settings.get("checkpoint_name", "latent_subgoal_planner_h25.pt")
+            / task_only_name
         )
         if release_candidate.exists():
             task_only_checkpoint = release_candidate
@@ -529,6 +561,7 @@ def main() -> None:
     summary = {
         "design": {
             "lookahead_steps": lookahead_steps,
+            "initialization": "fresh random weights; no prior checkpoint loaded",
             "play_labels": "same-episode observed future latent, capped at sampled goal",
             "play_success_filter": False,
             "play_phase_filter": "proprio_v2 transfer",
@@ -542,13 +575,13 @@ def main() -> None:
             "task_trajectory_sha256": sha256(task_path),
         },
         "samples": {
-            "play_total": sample_summary(play_samples, np.arange(len(play_samples["current"]))),
-            "play_train": sample_summary(play_samples, play_train),
-            "play_validation": sample_summary(play_samples, play_validation),
-            "play_test": sample_summary(play_samples, play_test),
-            "task_total": sample_summary(task_samples, np.arange(len(task_samples["current"]))),
-            "task_train": sample_summary(task_samples, task_train),
-            "task_validation": sample_summary(task_samples, task_validation),
+            "play_total": sample_summary(play_samples, np.arange(len(play_samples["current"])), lookahead_steps),
+            "play_train": sample_summary(play_samples, play_train, lookahead_steps),
+            "play_validation": sample_summary(play_samples, play_validation, lookahead_steps),
+            "play_test": sample_summary(play_samples, play_test, lookahead_steps),
+            "task_total": sample_summary(task_samples, np.arange(len(task_samples["current"])), lookahead_steps),
+            "task_train": sample_summary(task_samples, task_train, lookahead_steps),
+            "task_validation": sample_summary(task_samples, task_validation, lookahead_steps),
         },
         "episode_splits": {
             "play": play_episodes,

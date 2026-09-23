@@ -50,27 +50,28 @@ def main() -> None:
     config = base.load_config(args.config.resolve())
     settings = config["latent_subgoal_planner"]
     task_path = config["paths"]["output_dir"] / "data" / "proprio_v2_task_continuous.npz"
-    samples = load_samples(task_path, int(settings["lookahead_steps"]))
+    device = torch.device(args.device)
+    task_only, task_payload = load_latent_subgoal_planner(args.task_only, device)
+    stage2, stage2_payload = load_latent_subgoal_planner(args.stage2, device)
+    lookahead_steps = int(task_payload["lookahead_steps"])
+    if int(stage2_payload["lookahead_steps"]) != lookahead_steps:
+        raise ValueError("The checkpoints use different lookahead horizons.")
+    samples = load_samples(task_path, lookahead_steps)
     split_seed = int(config["seed"]) + int(settings["split_seed_offset"])
     train_indices, validation_indices, split = split_two_way_by_episode(
         samples["episode"], float(settings["validation_fraction"]), split_seed
     )
     del train_indices
-    device = torch.device(args.device)
     loader = DataLoader(make_dataset(samples, validation_indices), batch_size=128)
-    task_only, task_payload = load_latent_subgoal_planner(args.task_only, device)
-    stage2, stage2_payload = load_latent_subgoal_planner(args.stage2, device)
     expected = sorted(split["validation"])
     stored = sorted(int(value) for value in task_payload["validation_episodes"])
     if expected != stored:
         raise ValueError("Task-only checkpoint validation episodes do not match.")
-    if int(task_payload["lookahead_steps"]) != 25 or int(stage2_payload["lookahead_steps"]) != 25:
-        raise ValueError("Both checkpoints must use H=25.")
-
     task_error = per_sample_mse(task_only, loader, device)
     stage2_error = per_sample_mse(stage2, loader, device)
     difference = stage2_error - task_error
     result = {
+        "lookahead_steps": lookahead_steps,
         "validation_episodes": expected,
         "validation_samples": int(len(validation_indices)),
         "task_only": {
