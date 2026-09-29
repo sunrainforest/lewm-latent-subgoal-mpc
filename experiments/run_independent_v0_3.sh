@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo=/root/yzl/lewm-latent-subgoal-mpc
-python_bin=/publicworkspace/le-wm/shared/env/venvs/le-wm-py310/bin/python
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo="$(cd -- "$script_dir/.." && pwd)"
+python_bin="${PYTHON_BIN:-python}"
 source_dir="$repo/source"
 output_dir="$repo/runtime/outputs/proprio_v2"
 cd "$source_dir"
