@@ -2,6 +2,10 @@
 
 当前冻结的第一版为**仅在 TRANSFER 启用、无置信度门控、H=25 的成功轨迹检索 + MPC**。主结果和限制见 [`README.md`](README.md)，复现步骤见 [`docs/REPRODUCE.md`](docs/REPRODUCE.md)，权重/数据边界见 [`docs/DATA.md`](docs/DATA.md)。
 
+本仓库是基于 `LeWM_SAIMO` Cube / Proprio V2 实验代码的下游改造；
+来源、修改范围和 MIT 许可证边界见 [`NOTICE.md`](NOTICE.md) 与
+[`LICENSE`](LICENSE)。
+
 - `source/`：从 Cube 实验复制出的实现副本；`run_proprio_v2_experiment.py` 与 `proprio_v2_config.yaml` 为评估入口和配置。
 - `experiments/run_frozen_ungated_v1.sh`：顺序运行 Baseline 与无门控 H=25；不覆盖已有结果。
 - `experiments/summarize_frozen_ungated_v1.py`：校验配置并汇总 `proprio_v2` latent 完成率。
