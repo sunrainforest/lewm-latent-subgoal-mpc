@@ -4,6 +4,10 @@
 
 # LeWM_Saimo v0.1：Confidence-Gated Latent Subgoal MPC
 
+> 来源与许可：本实验是基于 `LeWM_SAIMO` Cube / Proprio V2 代码的下游改造；
+> LeWM_SAIMO 随附的 MIT License 及原版权声明已保留在仓库根目录
+> [`LICENSE`](../LICENSE)，详细边界见 [`NOTICE.md`](../NOTICE.md)。
+
 这是一个基于冻结 LeWorldModel（LeWM）的 Cube 机械臂长程控制实验版本。
 它保留原有 `ALIGN -> GRASP -> TRANSFER` 状态机、Actor、MPC、Value
 Ensemble 和 LeWM dynamics，只在 `TRANSFER` 阶段研究中间 latent 子目标。
